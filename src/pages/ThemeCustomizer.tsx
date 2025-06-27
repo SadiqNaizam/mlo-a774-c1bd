@@ -1,14 +1,12 @@
-import React, { useState, useMemo } from 'react';
-import { Palette, Download, Github, Copy, Check } from 'lucide-react';
-import { toast } from 'sonner';
+import React, { useMemo } from 'react';
+import { Palette, Download, Github } from 'lucide-react';
 
 // Custom Components
 import ColorPickerInput from '@/components/ColorPickerInput';
 import ComponentPreviewCanvas from '@/components/ComponentPreviewCanvas';
 import CodeOutputBlock from '@/components/CodeOutputBlock';
-// Note: Header, Footer, and LeftSidebar JSX are integrated directly into this page 
-// to allow for state management, as the provided components were self-contained.
-// This is necessary to fulfill the interactive user journey.
+import { useTheme, ThemeState } from '@/contexts/ThemeContext';
+import { hslToHex, hexToHsl } from '@/lib/colors';
 
 // Shadcn UI Components
 import { Button } from '@/components/ui/button';
@@ -17,94 +15,53 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from '@/components/ui/separator';
-
-interface ThemeState {
-  background: string;
-  foreground: string;
-  primary: string;
-  secondary: string;
-  destructive: string;
-  card: string;
-  border: string;
-  radius: number; // in rem
-}
-
-// Helper function to convert HSL string to hex, if needed (simplified for this example)
-// A full implementation would be more robust.
-const hslToHex = (hsl: string): string => {
-  // This is a placeholder. A real app would need a proper conversion library.
-  const mapping: { [key: string]: string } = {
-    '0 0% 100%': '#ffffff',
-    '222.2 84% 4.9%': '#09090b',
-    '222.2 47.4% 11.2%': '#18181b',
-    '210 40% 98%': '#f8fafc',
-    '210 40% 96.1%': '#f1f5f9',
-    '215.4 16.3% 46.9%': '#64748b',
-    '0 84.2% 60.2%': '#ef4444',
-    '214.3 31.8% 91.4%': '#e2e8f0',
-  };
-  const key = hsl.replace(/hsl\(|\)/g, '').trim();
-  return mapping[key] || '#000000';
-};
 
 const ThemeCustomizer = () => {
   console.log('ThemeCustomizer page loaded');
 
-  const [theme, setTheme] = useState<ThemeState>({
-    background: 'hsl(0 0% 100%)', // white
-    foreground: 'hsl(222.2 84% 4.9%)', // near black
-    primary: 'hsl(222.2 47.4% 11.2%)', // dark blue/black
-    secondary: 'hsl(210 40% 96.1%)', // light gray
-    destructive: 'hsl(0 84.2% 60.2%)', // red
-    card: 'hsl(0 0% 100%)', // white
-    border: 'hsl(214.3 31.8% 91.4%)', // light gray
-    radius: 0.5,
-  });
+  const { theme, setTheme } = useTheme();
 
   const handleThemeChange = <K extends keyof ThemeState>(key: K, value: ThemeState[K]) => {
-    setTheme(prev => ({ ...prev, [key]: value }));
+    setTheme(key, value);
   };
-
-  const previewStyles = useMemo(() => ({
-    '--background': theme.background,
-    '--foreground': theme.foreground,
-    '--card': theme.card,
-    '--card-foreground': theme.foreground,
-    '--popover': theme.card,
-    '--popover-foreground': theme.foreground,
-    '--primary': theme.primary,
-    '--primary-foreground': 'hsl(210 40% 98%)', // Assuming this is constant for contrast
-    '--secondary': theme.secondary,
-    '--secondary-foreground': theme.primary,
-    '--muted': theme.secondary,
-    '--muted-foreground': 'hsl(215.4 16.3% 46.9%)', // Assuming constant
-    '--accent': theme.secondary,
-    '--accent-foreground': theme.primary,
-    '--destructive': theme.destructive,
-    '--destructive-foreground': 'hsl(210 40% 98%)', // Assuming constant
-    '--border': theme.border,
-    '--input': theme.border,
-    '--ring': theme.primary,
-    '--radius': `${theme.radius}rem`,
-  } as React.CSSProperties), [theme]);
-
+  
   const generatedCssString = useMemo(() => {
-    return `:root {\n${Object.entries(previewStyles).map(([key, value]) => `  ${key}: ${value};`).join('\n')}\n}`;
-  }, [previewStyles]);
+    const themeStyles = {
+      '--background': theme.background,
+      '--foreground': theme.foreground,
+      '--card': theme.card,
+      '--card-foreground': theme.foreground,
+      '--popover': theme.card,
+      '--popover-foreground': theme.foreground,
+      '--primary': theme.primary,
+      '--primary-foreground': '210 40% 98%',
+      '--secondary': theme.secondary,
+      '--secondary-foreground': theme.primary,
+      '--muted': theme.secondary,
+      '--muted-foreground': '215.4 16.3% 46.9%',
+      '--accent': theme.secondary,
+      '--accent-foreground': theme.primary,
+      '--destructive': theme.destructive,
+      '--destructive-foreground': '210 40% 98%',
+      '--border': theme.border,
+      '--input': theme.border,
+      '--ring': theme.primary,
+      '--radius': `${theme.radius}rem`,
+    };
+    return `:root {\\n${Object.entries(themeStyles).map(([key, value]) => `  ${key}: ${value};`).join('\\n')}\\n}`;
+  }, [theme]);
 
   return (
     <div className="bg-background text-foreground">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-40 flex h-16 items-center justify-between border-b bg-background/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center gap-3">
-          <Palette className="h-6 w-6 text-primary" style={{ color: `hsl(${theme.primary})` }}/>
+          <Palette className="h-6 w-6 text-primary" />
           <h1 className="text-xl font-bold tracking-tight">Theme Enhancer</h1>
         </div>
         <Dialog>
           <DialogTrigger asChild>
-            <Button style={{ backgroundColor: `hsl(${theme.primary})`}}>
+            <Button>
               <Download className="mr-2 h-4 w-4" />
               Export Theme
             </Button>
@@ -134,15 +91,40 @@ const ThemeCustomizer = () => {
               <Card>
                 <CardHeader><CardTitle>Colors</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
-                   <ColorPickerInput
+                  <ColorPickerInput
                     label="Primary"
                     value={hslToHex(theme.primary)}
-                    onChange={(hex) => handleThemeChange('primary', `hsl(${hex})`)} // Simplified conversion
+                    onChange={(hex) => handleThemeChange('primary', hexToHsl(hex))}
                   />
                   <ColorPickerInput
                     label="Background"
                     value={hslToHex(theme.background)}
-                    onChange={(hex) => handleThemeChange('background', `hsl(${hex})`)}
+                    onChange={(hex) => handleThemeChange('background', hexToHsl(hex))}
+                  />
+                   <ColorPickerInput
+                    label="Foreground"
+                    value={hslToHex(theme.foreground)}
+                    onChange={(hex) => handleThemeChange('foreground', hexToHsl(hex))}
+                  />
+                   <ColorPickerInput
+                    label="Card"
+                    value={hslToHex(theme.card)}
+                    onChange={(hex) => handleThemeChange('card', hexToHsl(hex))}
+                  />
+                   <ColorPickerInput
+                    label="Secondary"
+                    value={hslToHex(theme.secondary)}
+                    onChange={(hex) => handleThemeChange('secondary', hexToHsl(hex))}
+                  />
+                   <ColorPickerInput
+                    label="Destructive"
+                    value={hslToHex(theme.destructive)}
+                    onChange={(hex) => handleThemeChange('destructive', hexToHsl(hex))}
+                  />
+                   <ColorPickerInput
+                    label="Border"
+                    value={hslToHex(theme.border)}
+                    onChange={(hex) => handleThemeChange('border', hexToHsl(hex))}
                   />
                 </CardContent>
               </Card>
@@ -151,7 +133,7 @@ const ThemeCustomizer = () => {
                 <CardHeader><CardTitle>Layout</CardTitle></CardHeader>
                 <CardContent className="space-y-6 pt-2">
                   <div className="space-y-3">
-                    <Label>Border Radius ({theme.radius}rem)</Label>
+                    <Label>Border Radius ({theme.radius.toFixed(2)}rem)</Label>
                     <Slider
                       value={[theme.radius]}
                       onValueChange={(val) => handleThemeChange('radius', val[0])}
@@ -167,7 +149,7 @@ const ThemeCustomizer = () => {
 
         {/* Main Content */}
         <div className="flex-1 pl-80 pt-16 pb-8">
-            <ComponentPreviewCanvas style={previewStyles} />
+            <ComponentPreviewCanvas />
         </div>
       </main>
 
